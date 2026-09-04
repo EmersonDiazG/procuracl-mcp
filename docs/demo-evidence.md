@@ -1,32 +1,46 @@
-# Demo evidence — ProcuraCL 0.3.0
+# Evidencias de la demostración — ProcuraCL 0.3.0
 
-These screenshots document one complete MCP Inspector run in demo mode. Demo data is synthetic and
-is explicitly labeled `source="demo"`.
+Estas capturas documentan una ejecución completa en MCP Inspector. Los datos son sintéticos y se
+identifican explícitamente mediante `source="demo"`.
 
-## Server connected
+## Servidor conectado
 
-![ProcuraCL connected through MCP stdio](images/inspector-connected.jpg)
+ProcuraCL se ejecuta como servidor MCP por entrada y salida estándar (`stdio`).
 
-## MCP tool catalog
+![ProcuraCL conectado mediante MCP stdio](images/inspector-connected.jpg)
 
-![Thirteen tools exposed by ProcuraCL](images/inspector-tools.jpg)
+## Catálogo MCP
 
-## Data-source diagnostic
+El servidor publica trece herramientas para descubrimiento, consulta, monitoreo y operación.
 
-![Demo mode and request budget diagnostic](images/inspector-status.jpg)
+![Herramientas publicadas por ProcuraCL](images/inspector-tools.jpg)
 
-## Typed opportunity search
+## Diagnóstico de la fuente
 
-![Compra Ágil search result](images/inspector-search.jpg)
+El diagnóstico confirma que la ejecución utiliza el modo demostración y no consume cuota externa.
 
-## First watchlist synchronization
+![Diagnóstico del modo demostración y presupuesto de solicitudes](images/inspector-status.jpg)
 
-![First persistent watchlist synchronization](images/inspector-watchlist-sync.jpg)
+## Búsqueda tipada
 
-## Idempotent second synchronization
+La consulta devuelve una oportunidad normalizada con comprador, monto, región, fechas y procedencia.
 
-![Second synchronization without a duplicate](images/inspector-idempotent-sync.jpg)
+![Resultado normalizado de una búsqueda de Compra Ágil](images/inspector-search.jpg)
 
-## Persistent change history
+## Primera sincronización
 
-![Watchlist change history](images/inspector-watchlist-history.jpg)
+La primera ejecución de la vigilancia registra una oportunidad nueva.
+
+![Primera sincronización persistente de una vigilancia](images/inspector-watchlist-sync.jpg)
+
+## Sincronización idempotente
+
+Una ejecución posterior reconoce el mismo registro y evita crear un duplicado.
+
+![Segunda sincronización sin duplicados](images/inspector-idempotent-sync.jpg)
+
+## Historial persistente
+
+El historial permite recuperar los cambios detectados por una vigilancia.
+
+![Historial de cambios de una vigilancia](images/inspector-watchlist-history.jpg)

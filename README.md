@@ -1,86 +1,99 @@
 # ProcuraCL MCP
 
-**Procurement intelligence for Chile, exposed as structured MCP tools.**
+**Inteligencia de compras públicas de Chile mediante herramientas MCP estructuradas.**
 
-ProcuraCL helps an AI agent discover and monitor public-procurement opportunities without forcing
-the user to understand the different contracts of Mercado Público v1 and Compra Ágil v2. It offers
-a credential-free demo for evaluation and a ticket-backed live mode for real ChileCompra data.
+[![CI](https://github.com/EmersonDiazG/procuracl-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/EmersonDiazG/procuracl-mcp/actions/workflows/ci.yml)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Licencia MIT](https://img.shields.io/badge/Licencia-MIT-green.svg)](LICENSE)
 
-> Independent portfolio project. ProcuraCL is not developed, endorsed, or supported by Dirección
-> ChileCompra or Mercado Público. Demo records are synthetic and always return `source="demo"`.
+ProcuraCL permite que un agente de IA descubra y monitoree oportunidades de compra pública sin
+obligar al usuario a conocer los contratos distintos de Mercado Público v1 y Compra Ágil v2. El
+proyecto incluye un modo demostración sin credenciales y un modo real que utiliza un ticket personal
+de ChileCompra.
 
-## Product demo
+> [!IMPORTANT]
+> Este es un proyecto de portafolio independiente. No es desarrollado, patrocinado ni respaldado por
+> la Dirección ChileCompra o Mercado Público. Los registros del modo demostración son sintéticos y
+> siempre indican `source="demo"`.
 
-The following run was captured from ProcuraCL `0.3.0` in MCP Inspector. A typed Compra Ágil search
-finds an automation opportunity and preserves its buyer, dates, amount, region, source, and retrieval
-time.
+## Demostración
 
-![Typed Compra Ágil result in MCP Inspector](docs/images/inspector-search.jpg)
+La siguiente ejecución corresponde a ProcuraCL `0.3.0` en MCP Inspector. La consulta tipada encuentra
+una oportunidad de Compra Ágil y conserva su comprador, monto, región, fechas, procedencia y momento
+de recuperación.
 
-The same criteria can become a persistent watchlist. The first synchronization records one new
-opportunity; a second identical synchronization records it as unchanged instead of creating a
-duplicate.
+![Resultado de una búsqueda de Compra Ágil en MCP Inspector](docs/images/inspector-search.jpg)
 
-![Persistent watchlist history in MCP Inspector](docs/images/inspector-watchlist-history.jpg)
+Los mismos criterios pueden convertirse en una vigilancia persistente. La primera sincronización
+registra una oportunidad nueva; una segunda ejecución idéntica la clasifica como sin cambios, en vez
+de crear un duplicado.
 
-The complete walkthrough is available in the [90-second demo script](docs/demo-script.md) and the
-[evidence gallery](docs/demo-evidence.md).
+![Historial persistente de una vigilancia en MCP Inspector](docs/images/inspector-watchlist-history.jpg)
 
-## Why it is more than an API wrapper
+Puedes reproducir el recorrido con el [guion de demostración de 90 segundos](docs/demo-script.md) y
+revisar todas las pruebas visuales en la [galería de evidencias](docs/demo-evidence.md).
 
-- **One typed contract:** tenders and Compra Ágil records become a common `Opportunity` model.
-- **Persistent monitoring:** SQLite stores watchlists, snapshots, sync runs, cache entries, and the
-  local daily request budget.
-- **Deterministic change detection:** the first observation is `new`, a changed fingerprint is
-  `updated`, and an identical record is `unchanged`.
-- **Production-safe boundaries:** secrets are environment-only, demo is the default, requests have a
-  timeout, and every result carries provenance.
-- **Resilient live integration:** Mercado Público v1 uses a typed community SDK while Compra Ágil v2
-  is isolated behind a local anti-corruption client tested against the observed API contract.
-- **Quota-aware reads:** cache hits do not consume the local budget; cache misses reserve one unit
-  atomically before contacting ChileCompra.
+## Qué problema resuelve
 
-## Architecture
+- **Un solo contrato tipado:** licitaciones y compras ágiles se convierten al modelo común
+  `Opportunity`.
+- **Monitoreo persistente:** SQLite almacena vigilancias, instantáneas, sincronizaciones, caché y el
+  presupuesto diario local de solicitudes.
+- **Detección determinista de cambios:** la primera observación es `new`, una huella modificada es
+  `updated` y un registro idéntico es `unchanged`.
+- **Secretos fuera del protocolo:** el ticket se obtiene exclusivamente desde el entorno; nunca se
+  recibe como argumento MCP ni se devuelve en una respuesta.
+- **Integración resiliente:** Mercado Público v1 y Compra Ágil v2 están aislados detrás de adaptadores
+  independientes y respuestas normalizadas.
+- **Uso responsable de la cuota:** un acierto de caché no consume presupuesto y cada fallo de caché
+  reserva una solicitud de forma atómica antes de contactar a ChileCompra.
+- **Procedencia verificable:** cada resultado indica su fuente y la fecha en que fue recuperado.
+
+## Arquitectura
 
 ```mermaid
 flowchart LR
-    Host[AI client / MCP Inspector] --> MCP[MCP tools, resources, prompt]
-    MCP --> App[Application services]
-    App --> Port[MarketGateway protocol]
-    Port --> Demo[Demo adapter]
-    Port --> Cache[SQLite read-through cache]
-    Cache --> Budget[Atomic request budget]
-    Budget --> V1[Mercado Público v1 adapter]
-    Budget --> V2[Compra Ágil v2 adapter]
-    V1 --> ChileCompra[Dirección ChileCompra APIs]
+    Cliente[Agente de IA / MCP Inspector] --> MCP[Herramientas, recursos y prompt MCP]
+    MCP --> Aplicacion[Casos de uso]
+    Aplicacion --> Puerto[Protocolo MarketGateway]
+    Puerto --> Demo[Adaptador de demostración]
+    Puerto --> Cache[Caché de lectura en SQLite]
+    Cache --> Cuota[Presupuesto atómico de solicitudes]
+    Cuota --> V1[Adaptador Mercado Público v1]
+    Cuota --> V2[Adaptador Compra Ágil v2]
+    V1 --> ChileCompra[APIs de la Dirección ChileCompra]
     V2 --> ChileCompra
-    App --> Repo[(SQLite watchlists and snapshots)]
+    Aplicacion --> Persistencia[(Vigilancias e instantáneas en SQLite)]
 ```
 
-The MCP interface does not contain business rules. Domain models, application use cases, external
-adapters, and persistence remain replaceable and independently testable. See the full
-[architecture](docs/architecture.md), [decision record](docs/decisions/ADR-001-mcp-as-interface.md),
-and [threat model](docs/threat-model.md).
+La interfaz MCP no contiene reglas de negocio. Los modelos de dominio, casos de uso, adaptadores
+externos y persistencia pueden probarse y reemplazarse de manera independiente. Consulta la
+[arquitectura detallada](docs/architecture.md), el
+[registro de decisión](docs/decisions/ADR-001-mcp-as-interface.md) y el
+[modelo de amenazas](docs/threat-model.md).
 
-## MCP surface
+## Superficie MCP
 
-| Capability | Tools |
+| Capacidad | Herramientas |
 | --- | --- |
-| Discovery | `search_tenders`, `get_tender`, `search_agile_purchases`, `get_agile_purchase` |
-| Market actors | `find_supplier`, `list_buyers` |
-| Monitoring | `create_watchlist`, `list_watchlists`, `sync_watchlist`, `list_watchlist_changes`, `delete_watchlist` |
-| Operations | `get_request_budget`, `get_data_source_status` |
+| Descubrimiento | `search_tenders`, `get_tender`, `search_agile_purchases`, `get_agile_purchase` |
+| Actores del mercado | `find_supplier`, `list_buyers` |
+| Monitoreo | `create_watchlist`, `list_watchlists`, `sync_watchlist`, `list_watchlist_changes`, `delete_watchlist` |
+| Operación | `get_request_budget`, `get_data_source_status` |
 
-Resources: `procura://about` and `procura://watchlists`  
+Recursos: `procura://about` y `procura://watchlists`.
+
 Prompt: `opportunity_brief`
 
-![ProcuraCL tool catalog in MCP Inspector](docs/images/inspector-tools.jpg)
+![Catálogo de herramientas de ProcuraCL en MCP Inspector](docs/images/inspector-tools.jpg)
 
-## Quickstart in demo mode
+## Inicio rápido en modo demostración
 
-Requirements: Python 3.12+, Node.js/npm for MCP Inspector, and `uv`.
+Requisitos: Python 3.12 o superior, Node.js/npm para MCP Inspector y `uv`.
 
 ```bash
+git clone https://github.com/EmersonDiazG/procuracl-mcp.git
+cd procuracl-mcp
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
@@ -88,7 +101,7 @@ pytest
 mcp dev src/procura_cl/mcp/server.py --with-editable .
 ```
 
-In Inspector, connect to the server and call `search_agile_purchases`:
+En Inspector, abre `search_agile_purchases` y ejecuta:
 
 ```json
 {
@@ -99,17 +112,17 @@ In Inspector, connect to the server and call `search_agile_purchases`:
 }
 ```
 
-Then demonstrate persistent monitoring:
+Luego prueba el monitoreo persistente:
 
-1. Create a watchlist with `terms=["automatización", "integración", "software"]`,
-   `kind="agile_purchases"`, `region="Región Metropolitana"`, and `status="open"`.
-2. Copy its `id` into `sync_watchlist`: one opportunity is recorded as new.
-3. Synchronize again: the same opportunity is counted as unchanged, not duplicated.
-4. Call `list_watchlist_changes` to retrieve the durable change history.
+1. Crea una vigilancia con `terms=["automatización", "integración", "software"]`,
+   `kind="agile_purchases"`, `region="Región Metropolitana"` y `status="open"`.
+2. Copia su `id` en `sync_watchlist`: se registrará una oportunidad nueva.
+3. Sincroniza nuevamente: la misma oportunidad quedará como sin cambios y no se duplicará.
+4. Ejecuta `list_watchlist_changes` para recuperar el historial persistente.
 
-### Inspector cannot find `uv`
+### Si Inspector no encuentra `uv`
 
-Start Inspector from the activated virtual environment and confirm that both executables resolve:
+Inicia Inspector desde el entorno virtual y confirma que ambos ejecutables estén disponibles:
 
 ```bash
 source .venv/bin/activate
@@ -118,47 +131,49 @@ command -v uv
 mcp dev src/procura_cl/mcp/server.py --with-editable .
 ```
 
-## Connect real Mercado Público data
+## Conectar datos reales de Mercado Público
 
-1. Request a personal ticket from the official [ChileCompra API portal](https://www.chilecompra.cl/api/).
-2. Copy the secret-safe template:
+1. Solicita un ticket personal en el portal oficial de
+   [APIs de ChileCompra](https://www.chilecompra.cl/api/).
+2. Copia la plantilla segura:
 
    ```bash
    cp .env.example .env
    ```
 
-3. Set these values locally; never commit or pass the ticket as a tool argument:
+3. Configura localmente estas variables. No publiques el ticket ni lo envíes como argumento de una
+   herramienta:
 
    ```dotenv
    PROCURA_DATA_MODE=live
-   CHILE_PUBLIC_MARKET_TICKET=your-personal-ticket
+   CHILE_PUBLIC_MARKET_TICKET=tu-ticket-personal
    ```
 
-4. Restart Inspector and call `get_data_source_status`. It must report `mode="live"`,
-   `source="mercado_publico"`, and `ticket_configured=true`.
+4. Reinicia Inspector y ejecuta `get_data_source_status`. Debe informar `mode="live"`,
+   `source="mercado_publico"` y `ticket_configured=true`.
 
-Friendly statuses such as `open`, `closed`, and `awarded` are normalized to the official values of
-each upstream API. The live adapter has been smoke-tested against both official services, but live
-tests remain opt-in so CI never spends an external request quota.
+Estados amigables como `open`, `closed` y `awarded` se normalizan a los valores oficiales de cada
+API. El adaptador real fue probado de forma controlada contra ambos servicios oficiales; las pruebas
+en vivo son opcionales para que la CI nunca consuma la cuota externa.
 
-## Configuration
+## Configuración
 
-| Variable | Default | Purpose |
+| Variable | Valor inicial | Propósito |
 | --- | --- | --- |
-| `PROCURA_DATA_MODE` | `demo` | Selects synthetic `demo` or API-backed `live` mode. |
-| `CHILE_PUBLIC_MARKET_TICKET` | empty | Personal ticket required only in live mode. |
-| `PROCURA_DATABASE_PATH` | `data/procura.db` | Persistent SQLite database. |
-| `PROCURA_DAILY_REQUEST_LIMIT` | `9500` | Local stop below the official 10,000 daily maximum. |
-| `PROCURA_CACHE_TTL_SECONDS` | `300` | Read-through cache lifetime in seconds. |
-| `PROCURA_API_TIMEOUT_SECONDS` | `30` | Upstream timeout, constrained to 1–120 seconds. |
+| `PROCURA_DATA_MODE` | `demo` | Selecciona datos sintéticos (`demo`) o datos de API (`live`). |
+| `CHILE_PUBLIC_MARKET_TICKET` | vacío | Ticket personal requerido únicamente en modo real. |
+| `PROCURA_DATABASE_PATH` | `data/procura.db` | Base de datos SQLite persistente. |
+| `PROCURA_DAILY_REQUEST_LIMIT` | `9500` | Corte local bajo el máximo oficial de 10.000 solicitudes diarias. |
+| `PROCURA_CACHE_TTL_SECONDS` | `300` | Vigencia de la caché de lectura en segundos. |
+| `PROCURA_API_TIMEOUT_SECONDS` | `30` | Tiempo máximo de espera externo, limitado entre 1 y 120 segundos. |
 
-`.env`, `.venv`, coverage output, and `data/` are ignored by Git. The ticket is never returned by an
-MCP tool or included in cache keys and records.
+`.env`, `.venv`, los informes de cobertura y `data/` están excluidos por Git. El ticket no aparece en
+las claves de caché, registros ni resultados MCP.
 
-## Quality gates
+## Calidad y seguridad
 
-The repository currently passes 24 automated tests with 79% statement coverage, Ruff formatting
-and linting, strict mypy analysis, lockfile validation, and GitHub Actions CI.
+El repositorio supera 24 pruebas automatizadas con 79 % de cobertura de sentencias, formato y
+análisis de Ruff, mypy estricto, validación del lockfile y GitHub Actions.
 
 ```bash
 ruff format --check src tests
@@ -168,36 +183,39 @@ pytest --cov=procura_cl --cov-report=term-missing
 uv lock --check
 ```
 
-## Run and package
+Además, el diseño incorpora límites de tiempo, presupuesto atómico, caché, deduplicación, separación
+de secretos, procedencia explícita y un [modelo de amenazas](docs/threat-model.md).
 
-Run as a standard MCP stdio server:
+## Ejecución y empaquetado
+
+Ejecutar como servidor MCP estándar mediante `stdio`:
 
 ```bash
 procura-cl-mcp
 ```
 
-Build and run with persistent local data in Docker:
+Construir y ejecutar con datos locales persistentes en Docker:
 
 ```bash
 docker build -t procura-cl-mcp .
 docker run --rm -i -v "$(pwd)/data:/app/data" procura-cl-mcp
 ```
 
-## Roadmap
+## Hoja de ruta
 
-1. Add opt-in scheduled live smoke tests and upstream contract alerts.
-2. Add redacted structured logs, metrics, and cache-hit telemetry.
-3. Expose the application layer through FastAPI and Streamable HTTP with authorization.
-4. Add PostgreSQL for multi-user monitoring.
-5. Add deterministic ranking and agent evaluations after the data path is operationally observed.
+1. Incorporar pruebas programadas y opcionales del modo real, con alertas ante cambios externos.
+2. Agregar registros estructurados sin secretos, métricas y telemetría de caché.
+3. Exponer los casos de uso mediante FastAPI y MCP Streamable HTTP con autorización.
+4. Incorporar PostgreSQL para monitoreo multiusuario.
+5. Agregar ranking determinista y evaluaciones de agentes después de observar el flujo real.
 
-## Data-use constraints
+## Restricciones de uso de datos
 
-ChileCompra documents a personal ticket, a 10,000-request daily limit, possible service changes,
-and mandatory attribution when unmodified API information is republished. ProcuraCL therefore uses
-caching, deduplication, request-budget metrics, explicit provenance, and the attribution
-`Dirección ChileCompra` in its live-data diagnostics.
+ChileCompra documenta un ticket personal, un límite de 10.000 solicitudes diarias, posibles cambios
+de servicio y atribución obligatoria al republicar información sin modificaciones. Por eso ProcuraCL
+utiliza caché, deduplicación, métricas de cuota, procedencia explícita y la atribución
+`Dirección ChileCompra` en los diagnósticos del modo real.
 
-## License
+## Licencia
 
 [MIT](LICENSE)
